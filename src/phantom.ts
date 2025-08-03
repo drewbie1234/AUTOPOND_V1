@@ -110,6 +110,10 @@ export async function promptAccountImportMethod(): Promise<
       name: "Miner 2 (from .env)",
       value: { env: "MINER2_PK", label: "Miner 2" },
     },
+    {
+      name: "Miner 3 (from .env)",
+      value: { env: "MINER3_PK", label: "Miner 3" },
+    },
     // Add more miners if needed.
   ].filter((choice) => Boolean(process.env[choice.value.env]));
 

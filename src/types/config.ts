@@ -1,4 +1,6 @@
 /**
+ * types/config.ts
+ *
  * AppConfig - Application-level settings.
  * @interface AppConfig
  *
@@ -65,7 +67,7 @@ export interface MiningConfig {
   skipMiningOnFailure: boolean;
   skipMiningIfInactive: boolean;
   boostHash: boolean;
-  boostHashAmountPerSession: number;
+  boostHashAmountPerSession: string;
 }
 
 /**
@@ -133,8 +135,8 @@ export interface SwapPairConfig {
  * Global swap settings (such as referral fees, round counts, delay ranges, etc.) continue to reside here.
  */
 export interface SwapConfig {
-  // Optional array of trading pairs for multi-pair support.
   pairs?: SwapPairConfig[];
+  selectedPairs?: SwapPairConfig[];
 
   // Optional individual pair properties for backward compatibility.
   tokenA?: string;
@@ -162,6 +164,7 @@ export interface SwapConfig {
   turboswap: boolean;
   swapDelayRange: [number, number];
   swapRoundDelayRange: [number, number];
+  roundsPerPair?: number; // Number of rounds to use a pair before random selection
 }
 
 /**
@@ -205,5 +208,5 @@ export interface FullConfig {
   mining: MiningConfig;
   solana: SolanaConfig;
   swap: SwapConfig;
-  ws: WsConfig; // New section for WebSocket configuration.
+  ws: WsConfig;
 }

@@ -66,12 +66,13 @@
     }
   ],
   "maxReferralFee": "0.000007",
-  "swapRounds": 10,
+  "swapRounds": 12,
   "swapRewardsActive": false,
   "enableRewardsCheck": false,
   "skipSwapIfNoRewards": false,
   "useReferralList": true,
   "turboswap": false,
   "swapDelayRange": [10000, 12000],
-  "swapRoundDelayRange": [15000, 20000]
+  "swapRoundDelayRange": [15000, 20000],
+  "roundsPerPair": 3
 }

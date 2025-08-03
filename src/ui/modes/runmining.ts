@@ -24,11 +24,11 @@ export async function runMining(
 
     while (true) {
       printMessageLinesBorderBox(
-        ["🔍 Checking active mining status via websocket (30s)..."],
+        ["🔍 Checking active mining status via websocket (15s)..."],
         miningStyle
       );
       //const active = await checkActiveMining(30000);
-      const active = await seeMiningActivity("Check Active Mining", {timeoutMs: 30000})
+      const active = await seeMiningActivity("Check Active Mining", {timeoutMs: 15000})
       printMessageLinesBorderBox(
         [`Status: ${active ? "Active" : "Inactive"}`],
         miningStyle

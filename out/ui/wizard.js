@@ -24,7 +24,8 @@ const printtable_1 = require("./tables/printtable");
 // runWizard: the main wizard loop
 // ----------------------------------------------------------------------
 async function runWizard(fullConfig) {
-    const { app, mining, swap } = fullConfig;
+    const { app, mining } = fullConfig;
+    let swap = fullConfig.swap;
     // Outer loop: after a complete run, re‑prompt for mode selection.
     while (true) {
         await (0, helpers_1.d)(300);
@@ -195,12 +196,39 @@ async function runWizard(fullConfig) {
             "Total Cycles": effectiveRounds > 0 ? effectiveRounds : "Infinite",
             activeMiningRetryDelayMs: mining.activeMiningRetryDelayMs,
             miningLoopFailRetryDelayMs: mining.miningLoopFailRetryDelayMs,
-            miningSuccessDelayMs: mining.miningSuccessDelayMs
+            miningSuccessDelayMs: mining.miningSuccessDelayMs,
         };
         if (effectiveMode === "Mine" || effectiveMode === "Mine and Swap") {
             (0, printtable_1.printTable)("⛏️  Mining config", mining);
         }
+        // --- NEW: Trading Pair Selection for Swap ---
         if (effectiveMode === "Swap" || effectiveMode === "Mine and Swap") {
+            if (swap.pairs && Array.isArray(swap.pairs)) {
+                // If more than one pair is defined, prompt the user to choose one.
+                if (swap.pairs.length > 1) {
+                    const pairChoices = swap.pairs.map((pair, index) => {
+                        return { name: `${pair.tokenA} / ${pair.tokenB}`, value: index };
+                    });
+                    const { selectedPairIndex } = await inquirer_1.default.prompt([
+                        {
+                            type: "list",
+                            name: "selectedPairIndex",
+                            message: chalk_1.default.bold.green("🤝  Choose a trading pair for swap:"),
+                            choices: pairChoices,
+                        },
+                    ]);
+                    const selectedPair = swap.pairs[selectedPairIndex];
+                    // Merge the selected pair details into the overall swap config.
+                    swap = Object.assign(Object.assign({}, swap), selectedPair);
+                }
+                else if (swap.pairs.length === 1) {
+                    // Only one pair is available, so use it directly.
+                    swap = Object.assign(Object.assign({}, swap), swap.pairs[0]);
+                }
+                else {
+                    console.warn("No trading pairs defined in swap config. Using default swap settings.");
+                }
+            }
             (0, printtable_1.printTable)("🤝  Swap config", swap);
         }
         // --- Cycle Execution ---
@@ -227,7 +255,6 @@ async function runWizard(fullConfig) {
                         (0, metrics_1.accumulateSwapMetrics)(swapMetrics);
                     }
                     (0, print_1.printMessageLinesBorderBox)([`✅ Cycle ${i + 1} complete`], borderboxstyles_1.generalStyle);
-                    await new Promise((res) => setTimeout(res, mining.cycleDelayMs));
                 }
             }
             else {
@@ -252,7 +279,6 @@ async function runWizard(fullConfig) {
                         (0, metrics_1.accumulateSwapMetrics)(swapMetrics);
                     }
                     (0, print_1.printMessageLinesBorderBox)([`✅ Cycle ${cycleCount} complete`], borderboxstyles_1.generalStyle);
-                    await new Promise((res) => setTimeout(res, mining.cycleDelayMs));
                 }
             }
             (0, print_1.printMessageLinesBorderBox)(["🏁 Operation complete."], borderboxstyles_1.generalStyle);

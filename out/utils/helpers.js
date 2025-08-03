@@ -4,16 +4,30 @@ exports.d = d;
 exports.tryParseJSON = tryParseJSON;
 exports.formatKMB = formatKMB;
 exports.parseFormattedNumber = parseFormattedNumber;
-exports.pickRandom = pickRandom;
+exports.getRandomAmount = getRandomAmount;
+exports.getRandomDelay = getRandomDelay;
+exports.getRandomReferralUrl = getRandomReferralUrl;
 exports.parseString = parseString;
 exports.accumulateNumericField = accumulateNumericField;
 exports.accumulateDictionary = accumulateDictionary;
 exports.storeTxId = storeTxId;
 const tslib_1 = require("tslib");
 const path_1 = tslib_1.__importDefault(require("path"));
-const fs_1 = tslib_1.__importDefault(require("fs"));
-async function d(t) {
-    return new Promise((res) => setTimeout(res, t));
+const fs_1 = tslib_1.__importDefault(require("fs")); // for synchronous file operations (e.g., appendFileSync)
+const fs_2 = require("fs"); // for promise-based operations (e.g., readFile)
+/**
+ * d - Delay function.
+ *
+ * If two arguments are provided, the function generates a random delay between min and max.
+ * If one argument is provided, it behaves as a fixed delay.
+ *
+ * @param {number} min - The minimum delay time in ms.
+ * @param {number} [max] - (Optional) The maximum delay time in ms.
+ * @returns {Promise<void>} A promise that resolves after the chosen delay.
+ */
+async function d(min, max) {
+    const delayTime = max !== undefined ? getRandomDelay(min, max) : min;
+    return new Promise((resolve) => setTimeout(resolve, delayTime));
 }
 function tryParseJSON(jsonStr) {
     try {
@@ -54,11 +68,63 @@ function parseFormattedNumber(value) {
     }
 }
 /**
- * pickRandom:
- * Returns a random element from an array.
+ * getRandomAmount:
+ * Generates a random number between min and max (inclusive)
+ * and rounds it to 3 significant figures.
+ *
+ * @param {number} min - The minimum amount.
+ * @param {number} max - The maximum amount.
+ * @returns {number} A random value between min and max rounded to 3 sig figs.
  */
-function pickRandom(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
+function getRandomAmount(min, max) {
+    const raw = Math.random() * (max - min) + min;
+    return Number(raw.toPrecision(3));
+}
+/**
+ * getRandomDelay:
+ * Generates a random delay time between min and max milliseconds.
+ *
+ * @param {number} min - The minimum delay time in ms.
+ * @param {number} max - The maximum delay time in ms.
+ * @returns {number} A random delay time in milliseconds.
+ */
+function getRandomDelay(min, max) {
+    const raw = Math.random() * (max - min) + min;
+    return Math.floor(raw);
+}
+// Define the default CSV file path (absolute path based on the current working directory)
+const DEFAULT_REFERRAL_FILE_PATH = path_1.default.join(process.cwd(), "src", "referral", "referral_links_master.csv");
+/**
+ * getRandomReferralUrl
+ * ---------------------
+ * Reads a CSV file of referral URLs (one per line), filters out any empty lines,
+ * then randomly selects and returns one of the URLs.
+ *
+ * @param {string} [filePath=DEFAULT_REFERRAL_FILE_PATH] - The path to the CSV file containing the referral URLs.
+ * @returns {Promise<string>} A promise that resolves to a randomly selected URL.
+ */
+async function getRandomReferralUrl(filePath = DEFAULT_REFERRAL_FILE_PATH) {
+    try {
+        // Read the file contents using UTF-8 encoding.
+        const data = await fs_2.promises.readFile(filePath, "utf8");
+        // Split the file into lines, trim any extra whitespace, and filter out empty lines.
+        const urls = data
+            .split("\n")
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+        // If no URLs are found, throw an error.
+        if (urls.length === 0) {
+            throw new Error("No referral URLs found in CSV");
+        }
+        // Select a random index from the array of URLs.
+        const randomIndex = Math.floor(Math.random() * urls.length);
+        return urls[randomIndex];
+    }
+    catch (error) {
+        // Log the error and rethrow it so the caller can handle it.
+        console.error("Error reading CSV file for referral URLs:", error);
+        throw error;
+    }
 }
 /**
  * parseString - Safely converts a possibly-null string to a trimmed string.

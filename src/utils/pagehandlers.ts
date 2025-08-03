@@ -28,6 +28,7 @@ export const clickSelectorWtxt = async (
   );
 };
 
+
 /**
  * getBoundingBox:
  * Finds an element matching a selector that contains specified text and returns its center coordinates.

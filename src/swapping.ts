@@ -8,13 +8,14 @@ import { d, getRandomAmount } from "./utils/helpers";
 import chalk from "chalk";
 import { Connection } from "@solana/web3.js";
 import { SwapCycleMetrics, accumulateSwapMetrics } from "./metrics/metrics";
-import { SwapConfig } from "./types/config";
+import { SwapConfig, SwapPairConfig } from "./types/config";
 import {
   printMessageLinesBorderBox,
   printSessionEndReport,
   buildOsc8Hyperlink,
   printSwapSummary,
 } from "./ui/print";
+
 import {
   getPhantomPublicKey,
   getSolBalance,
@@ -39,6 +40,7 @@ import {
   swapBtn,
 } from "./utils/pagehandlers";
 import { handlephanpopup } from "./phantom";
+import { printTable } from "./ui/tables/printtable";
 
 // Global state for tracking current token configuration.
 let currentFromToken: string;
@@ -53,6 +55,10 @@ let userpublickey: string;
 // Global flags for turboswap mode.
 let tokensAlreadySelected = false;
 let swapAmountEntered = false;
+
+// State for random pair selection
+let currentSelectedPair: SwapPairConfig | null = null;
+let currentRoundCount: number = 0;
 
 /**
  * connectwallet
@@ -182,6 +188,9 @@ export const swappond = async (
   // Reset flags.
   tokensAlreadySelected = false;
   swapAmountEntered = false;
+  // Reset pair selection state for new swappond execution
+  currentSelectedPair = null;
+  currentRoundCount = 0;
 
   // Initialize token configuration using the selected pair.
   currentFromToken = config.tokenA ?? "";
@@ -461,6 +470,7 @@ export const swappond = async (
       metrics.preSignFailures.other,
     "Total Swap Attempts": metrics.totalSwapAttempts,
     "Volume by Token": metrics.volumeByToken,
+    "Swaps by Token": metrics.swapsByToken,
     "Total Transaction Fees (SOL)": metrics.totalTransactionFeesSOL.toFixed(6),
     "Referral Fees by Token": metrics.referralFeesByToken,
     "Pre-Sign Failures": metrics.preSignFailures,
@@ -720,7 +730,7 @@ async function checkForPostSignError(page: Page): Promise<string | null> {
  * runTokenManager
  * ---------------
  * Checks the current balance for the "from" token and determines the swap amount.
- * Flips token direction if balance is below the configured threshold.
+ * Selects a random trading pair from config.selectedPairs every config.roundsPerPair rounds.
  *
  * @param page - The Puppeteer page instance.
  * @param config - The swap configuration parameters.
@@ -730,18 +740,53 @@ async function runTokenManager(
   page: Page,
   config: SwapConfig
 ): Promise<number> {
-  // Initialize token configuration if not already set.
-  if (!currentFromToken) {
-    currentFromToken = config.tokenA ?? "";
-    currentFromMint = config.tokenAMint;
-    currentThreshold = config.tokenALowThreshold ?? 0;
-    currentOutputToken = config.tokenB ?? "";
-    currentOutputMint = config.tokenBMint;
-    tokensAlreadySelected = false;
-    swapAmountEntered = false;
+  // Select a new random pair if first round or roundsPerPair reached
+  if (
+    currentSelectedPair === null ||
+    currentRoundCount >= (config.roundsPerPair ?? 1)
+  ) {
+    if (!config.selectedPairs || config.selectedPairs.length === 0) {
+      printMessageLinesBorderBox(
+        [
+          "No valid trading pairs available in tokenManager. Using default pair.",
+        ],
+        warningStyle
+      );
+      // Fallback to config.tokenA/tokenB
+      currentFromToken = config.tokenA ?? "";
+      currentFromMint = config.tokenAMint;
+      currentThreshold = config.tokenALowThreshold ?? 0;
+      currentOutputToken = config.tokenB ?? "";
+      currentOutputMint = config.tokenBMint;
+      currentSelectedPair = null;
+      currentRoundCount = 0;
+    } else {
+      // Randomly select a pair
+      const randomIndex = Math.floor(
+        Math.random() * config.selectedPairs.length
+      );
+      currentSelectedPair = config.selectedPairs[randomIndex];
+      currentFromToken = currentSelectedPair.tokenA ?? "";
+      currentFromMint = currentSelectedPair.tokenAMint;
+      currentThreshold = currentSelectedPair.tokenALowThreshold ?? 0;
+      currentOutputToken = currentSelectedPair.tokenB ?? "";
+      currentOutputMint = currentSelectedPair.tokenBMint;
+      currentRoundCount = 0;
+      // Display the selected pair
+      printTable("🤝  Selected pair for this swap", currentSelectedPair);
+    }
+  } else {
+    // Reuse the current pair and display it
+    printTable("🤝  Reusing pair for this swap", currentSelectedPair);
   }
+  // Increment round count
+  currentRoundCount++;
 
-  // Check current balance.
+  // Reset flags for new pair or after flip
+  tokensAlreadySelected = false;
+  swapAmountEntered = false;
+
+  // Check current balance
   const balance = await getRealBalance(page, currentFromToken, currentFromMint);
   printMessageLinesBorderBox(
     [
@@ -753,11 +798,11 @@ async function runTokenManager(
     generalStyle
   );
 
-  // If balance is too low, flip token direction.
+  // If balance is too low, flip token direction
   if (balance < currentThreshold) {
     printMessageLinesBorderBox(
       [
-        `${currentFromToken} balance (${balance}) is below the threshold (${currentThreshold}). Flipping token direction...`,
+        `${currentFromToken} balance (${balance}) is below threshold (${currentThreshold}). Flipping token direction...`,
       ],
       warningStyle
     );
@@ -770,6 +815,7 @@ async function runTokenManager(
     );
   }
 
+  // Determine swap amount based on currentFromToken and rewards mode
   let minAmount: number, maxAmount: number;
   if (currentFromToken === (config.tokenA ?? "")) {
     if (config.swapRewardsActive) {
