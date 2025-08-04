@@ -16,6 +16,7 @@ const swapMetricsDb_1 = require("./db/swapMetricsDb");
 const borderboxstyles_1 = require("./ui/styles/borderboxstyles");
 const pagehandlers_1 = require("./utils/pagehandlers");
 const phantom_1 = require("./phantom");
+const printtable_1 = require("./ui/tables/printtable");
 // Global state for tracking current token configuration.
 let currentFromToken;
 let currentFromMint;
@@ -27,6 +28,9 @@ let userpublickey;
 // Global flags for turboswap mode.
 let tokensAlreadySelected = false;
 let swapAmountEntered = false;
+// State for random pair selection
+let currentSelectedPair = null;
+let currentRoundCount = 0;
 /**
  * connectwallet
  * -------------
@@ -133,6 +137,9 @@ const swappond = async (page, browser, config) => {
     // Reset flags.
     tokensAlreadySelected = false;
     swapAmountEntered = false;
+    // Reset pair selection state for new swappond execution
+    currentSelectedPair = null;
+    currentRoundCount = 0;
     // Initialize token configuration using the selected pair.
     currentFromToken = (_a = config.tokenA) !== null && _a !== void 0 ? _a : "";
     currentFromMint = config.tokenAMint;
@@ -331,6 +338,7 @@ const swappond = async (page, browser, config) => {
             metrics.preSignFailures.other,
         "Total Swap Attempts": metrics.totalSwapAttempts,
         "Volume by Token": metrics.volumeByToken,
+        "Swaps by Token": metrics.swapsByToken,
         "Total Transaction Fees (SOL)": metrics.totalTransactionFeesSOL.toFixed(6),
         "Referral Fees by Token": metrics.referralFeesByToken,
         "Pre-Sign Failures": metrics.preSignFailures,
@@ -534,25 +542,54 @@ async function checkForPostSignError(page) {
  * runTokenManager
  * ---------------
  * Checks the current balance for the "from" token and determines the swap amount.
- * Flips token direction if balance is below the configured threshold.
+ * Selects a random trading pair from config.selectedPairs every config.roundsPerPair rounds.
  *
  * @param page - The Puppeteer page instance.
  * @param config - The swap configuration parameters.
  * @returns The chosen swap amount.
  */
 async function runTokenManager(page, config) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
-    // Initialize token configuration if not already set.
-    if (!currentFromToken) {
-        currentFromToken = (_a = config.tokenA) !== null && _a !== void 0 ? _a : "";
-        currentFromMint = config.tokenAMint;
-        currentThreshold = (_b = config.tokenALowThreshold) !== null && _b !== void 0 ? _b : 0;
-        currentOutputToken = (_c = config.tokenB) !== null && _c !== void 0 ? _c : "";
-        currentOutputMint = config.tokenBMint;
-        tokensAlreadySelected = false;
-        swapAmountEntered = false;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
+    // Select a new random pair if first round or roundsPerPair reached
+    if (currentSelectedPair === null ||
+        currentRoundCount >= ((_a = config.roundsPerPair) !== null && _a !== void 0 ? _a : 1)) {
+        if (!config.selectedPairs || config.selectedPairs.length === 0) {
+            (0, print_1.printMessageLinesBorderBox)([
+                "No valid trading pairs available in tokenManager. Using default pair.",
+            ], borderboxstyles_1.warningStyle);
+            // Fallback to config.tokenA/tokenB
+            currentFromToken = (_b = config.tokenA) !== null && _b !== void 0 ? _b : "";
+            currentFromMint = config.tokenAMint;
+            currentThreshold = (_c = config.tokenALowThreshold) !== null && _c !== void 0 ? _c : 0;
+            currentOutputToken = (_d = config.tokenB) !== null && _d !== void 0 ? _d : "";
+            currentOutputMint = config.tokenBMint;
+            currentSelectedPair = null;
+            currentRoundCount = 0;
+        }
+        else {
+            // Randomly select a pair
+            const randomIndex = Math.floor(Math.random() * config.selectedPairs.length);
+            currentSelectedPair = config.selectedPairs[randomIndex];
+            currentFromToken = (_e = currentSelectedPair.tokenA) !== null && _e !== void 0 ? _e : "";
+            currentFromMint = currentSelectedPair.tokenAMint;
+            currentThreshold = (_f = currentSelectedPair.tokenALowThreshold) !== null && _f !== void 0 ? _f : 0;
+            currentOutputToken = (_g = currentSelectedPair.tokenB) !== null && _g !== void 0 ? _g : "";
+            currentOutputMint = currentSelectedPair.tokenBMint;
+            currentRoundCount = 0;
+            // Display the selected pair
+            (0, printtable_1.printTable)("🤝  Selected pair for this swap", currentSelectedPair);
+        }
     }
-    // Check current balance.
+    else {
+        // Reuse the current pair and display it
+        (0, printtable_1.printTable)("🤝  Reusing pair for this swap", currentSelectedPair);
+    }
+    // Increment round count
+    currentRoundCount++;
+    // Reset flags for new pair or after flip
+    tokensAlreadySelected = false;
+    swapAmountEntered = false;
+    // Check current balance
     const balance = await getRealBalance(page, currentFromToken, currentFromMint);
     (0, print_1.printMessageLinesBorderBox)([
         `Current ${currentFromToken} balance: ${balance}`,
@@ -560,35 +597,36 @@ async function runTokenManager(page, config) {
             ? `Balance (${balance}) is below threshold (${currentThreshold}).`
             : `Balance is sufficient (threshold: ${currentThreshold}).`,
     ], borderboxstyles_1.generalStyle);
-    // If balance is too low, flip token direction.
+    // If balance is too low, flip token direction
     if (balance < currentThreshold) {
         (0, print_1.printMessageLinesBorderBox)([
-            `${currentFromToken} balance (${balance}) is below the threshold (${currentThreshold}). Flipping token direction...`,
+            `${currentFromToken} balance (${balance}) is below threshold (${currentThreshold}). Flipping token direction...`,
         ], borderboxstyles_1.warningStyle);
         flipTokenDirection(config);
         (0, print_1.printMessageLinesBorderBox)([
             `After flip: fromToken is now ${currentFromToken}, toToken is ${currentOutputToken}.`,
         ], borderboxstyles_1.swappingStyle);
     }
+    // Determine swap amount based on currentFromToken and rewards mode
     let minAmount, maxAmount;
-    if (currentFromToken === ((_d = config.tokenA) !== null && _d !== void 0 ? _d : "")) {
+    if (currentFromToken === ((_h = config.tokenA) !== null && _h !== void 0 ? _h : "")) {
         if (config.swapRewardsActive) {
-            minAmount = (_e = config.tokenARewardMin) !== null && _e !== void 0 ? _e : 0;
-            maxAmount = (_f = config.tokenARewardMax) !== null && _f !== void 0 ? _f : 0;
+            minAmount = (_j = config.tokenARewardMin) !== null && _j !== void 0 ? _j : 0;
+            maxAmount = (_k = config.tokenARewardMax) !== null && _k !== void 0 ? _k : 0;
         }
         else {
-            minAmount = (_g = config.tokenAMinAmount) !== null && _g !== void 0 ? _g : 0;
-            maxAmount = (_h = config.tokenAMaxAmount) !== null && _h !== void 0 ? _h : 0;
+            minAmount = (_l = config.tokenAMinAmount) !== null && _l !== void 0 ? _l : 0;
+            maxAmount = (_m = config.tokenAMaxAmount) !== null && _m !== void 0 ? _m : 0;
         }
     }
     else {
         if (config.swapRewardsActive) {
-            minAmount = (_j = config.tokenBRewardMin) !== null && _j !== void 0 ? _j : 0;
-            maxAmount = (_k = config.tokenBRewardMax) !== null && _k !== void 0 ? _k : 0;
+            minAmount = (_o = config.tokenBRewardMin) !== null && _o !== void 0 ? _o : 0;
+            maxAmount = (_p = config.tokenBRewardMax) !== null && _p !== void 0 ? _p : 0;
         }
         else {
-            minAmount = (_l = config.tokenBMinAmount) !== null && _l !== void 0 ? _l : 0;
-            maxAmount = (_m = config.tokenBMaxAmount) !== null && _m !== void 0 ? _m : 0;
+            minAmount = (_q = config.tokenBMinAmount) !== null && _q !== void 0 ? _q : 0;
+            maxAmount = (_r = config.tokenBMaxAmount) !== null && _r !== void 0 ? _r : 0;
         }
     }
     const chosenAmount = (0, helpers_1.getRandomAmount)(minAmount, maxAmount);

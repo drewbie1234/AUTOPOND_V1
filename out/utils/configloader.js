@@ -57,7 +57,7 @@ function loadMiningConfig() {
         skipMiningOnFailure: true,
         skipMiningIfInactive: false,
         boostHash: false,
-        boostHashAmountPerSession: 0.1,
+        boostHashAmountPerSession: "0.01",
     });
 }
 function loadSolanaConfig() {
@@ -70,39 +70,34 @@ function loadSolanaConfig() {
     });
 }
 function loadSwapConfig() {
-    // Load swapconfig.json with default swap settings.
     const swapConfig = loadFile("./config/swapconfig.json", {
-        tokenA: "SOL",
-        tokenB: "USDT",
-        tokenAMint: "",
-        tokenBMint: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
-        tokenALowThreshold: 0.01,
-        tokenBLowThreshold: 2,
-        // Regular mode amounts
-        tokenAMinAmount: 0.0052,
-        tokenAMaxAmount: 0.0058,
-        tokenBMinAmount: 1.1,
-        tokenBMaxAmount: 1.2,
-        // Reward mode amounts
-        tokenARewardMin: 0.052,
-        tokenARewardMax: 0.054,
-        tokenBRewardMin: 10,
-        tokenBRewardMax: 11.5,
-        maxReferralFee: "0.000005",
-        swapRounds: 30,
+        pairs: [], // Default to empty pairs array
+        selectedPairs: undefined, // Explicitly undefined for non-persistence
+        tokenA: "USDC",
+        tokenB: "SOL",
+        tokenAMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        tokenBMint: "So11111111111111111111111111111111111111112",
+        tokenALowThreshold: 10,
+        tokenBLowThreshold: 0.1,
+        tokenAMinAmount: 10,
+        tokenAMaxAmount: 12,
+        tokenBMinAmount: 0.09,
+        tokenBMaxAmount: 0.1,
+        tokenARewardMin: 10,
+        tokenARewardMax: 12,
+        tokenBRewardMin: 0.08,
+        tokenBRewardMax: 0.1,
+        maxReferralFee: "0.000007",
+        swapRounds: 10,
         swapRewardsActive: false,
         enableRewardsCheck: false,
         skipSwapIfNoRewards: false,
         useReferralList: true,
-        turboswap: true,
-        swapDelayRange: [5000, 20000],
-        swapRoundDelayRange: [60000, 180000],
+        turboswap: false,
+        swapDelayRange: [10000, 12000],
+        swapRoundDelayRange: [15000, 20000],
+        roundsPerPair: 1, // Default to 1 (random pair per round)
     });
-    // ────────────────────────────────
-    // Backward Compatibility for Multi-Pair Support:
-    // If the loaded swap config does not include a valid 'pairs' array,
-    // create a default one using the individual swap fields.
-    // ────────────────────────────────
     if (!swapConfig.pairs || swapConfig.pairs.length === 0) {
         swapConfig.pairs = [
             {

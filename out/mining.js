@@ -171,53 +171,219 @@ class MiningSession {
      * triggerBoostAndSign:
      * Initiates the boost flow by:
      * 1. Clicking the initial Boost button.
-     * 2. Clicking the boost amount button (passed as boostAmount).
-     * 3. Clicking the secondary Boost button.
-     * 4. Then waiting for and signing the transaction via the Phantom popup.
-     *
-     * @param boostAmount - The boost amount button's inner text (e.g., "0.1").
+     * 2. Entering the boost amount in the input field (using Ctrl+A and Ctrl+V).
+     * 3. Checking for "Too Low" message and aborting if present by clicking the SVG close button.
+     * 4. Clicking the secondary Boost button.
+     * 5. Signing the transaction via the Phantom popup.
+     * 6. Closing the popup.
+     * If "Too Low" or other errors occur, logs the issue and exits the boost attempt without stopping the mining session.
+     * @param boostAmount - The boost amount to enter (e.g., "0.1").
      */
     async triggerBoostAndSign(boostAmount) {
         try {
-            (0, print_1.printMessageLinesBorderBox)(["Waiting for element..."], borderboxstyles_1.miningStyle);
-            await (0, pagehandlers_1.waitforelement)(this.page, "button", "BOOST", 10000);
-            (0, print_1.printMessageLinesBorderBox)(["Clicking initial Boost button..."], borderboxstyles_1.miningStyle);
-            // Click the initial Boost button.
-            const initialClicked = await (0, pagehandlers_1.clickbyinnertxt)(this.page, "button", "Boost");
-            (0, print_1.printMessageLinesBorderBox)(["Initial Boost button clicked. Waiting for boost options..."], borderboxstyles_1.miningStyle);
-            await (0, pagehandlers_1.waitforelement)(this.page, "button", miningConfig.boostHashAmountPerSession.toString(), 10000);
-            // Click the boost amount button (e.g., "0.1").
-            const amountClicked = await (0, pagehandlers_1.clickbyinnertxt)(this.page, "button", boostAmount);
-            if (!amountClicked) {
-                throw new Error(`Boost amount button "${boostAmount}" not found or not clickable.`);
+            (0, print_1.printMessageLinesBorderBox)(["Waiting for initial Boost button..."], borderboxstyles_1.miningStyle);
+            let boostFound = false;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    await (0, pagehandlers_1.waitforelement)(this.page, "button", "BOOST", 10000); // Implicitly clicks the button
+                    boostFound = true;
+                    break;
+                }
+                catch (error) {
+                    (0, print_1.printMessageLinesBorderBox)([`Boost button attempt ${attempt} failed, retrying...`], borderboxstyles_1.miningStyle);
+                    await (0, helpers_1.d)(3000);
+                }
             }
-            (0, print_1.printMessageLinesBorderBox)([`Boost amount button "${boostAmount}" clicked.`], borderboxstyles_1.miningStyle);
-            // Click the secondary Boost button that confirms the boost option.
+            if (!boostFound) {
+                (0, print_1.printMessageLinesBorderBox)(["Initial Boost button not found after retries, aborting boost."], borderboxstyles_1.warningStyle);
+                return; // Exit boost attempt
+            }
+            (0, print_1.printMessageLinesBorderBox)(["Initial Boost button clicked..."], borderboxstyles_1.miningStyle);
+            // Wait for the input field
+            (0, print_1.printMessageLinesBorderBox)(["Waiting for boost amount input field..."], borderboxstyles_1.miningStyle);
+            const inputSelector = 'input[placeholder="Custom Amount"]';
+            let inputFound = false;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    await this.page.waitForSelector(inputSelector, { timeout: 10000 });
+                    inputFound = true;
+                    break;
+                }
+                catch (error) {
+                    (0, print_1.printMessageLinesBorderBox)([`Input field attempt ${attempt} failed, retrying...`], borderboxstyles_1.miningStyle);
+                    await (0, helpers_1.d)(3000);
+                }
+            }
+            if (!inputFound) {
+                // Log available inputs for debugging
+                const inputs = await this.page.$$eval("input", (els) => els.map((el) => ({
+                    placeholder: el.getAttribute("placeholder") || "",
+                    id: el.id,
+                    class: el.className,
+                    value: el.value,
+                })));
+                (0, print_1.printMessageLinesBorderBox)(["Available inputs:", JSON.stringify(inputs, null, 2)], borderboxstyles_1.warningStyle);
+                return; // Exit boost attempt
+            }
+            // Select and paste the boost amount with Ctrl+A and Ctrl+V
+            (0, print_1.printMessageLinesBorderBox)([`Pasting boost amount: ${boostAmount}`], borderboxstyles_1.miningStyle);
+            await this.page.waitForSelector(inputSelector, { timeout: 5000 });
+            // Focus the input
+            await this.page.evaluate((selector) => {
+                const input = document.querySelector(selector);
+                if (!input || input.tagName !== "INPUT") {
+                    throw new Error(`Valid input element not found for selector: ${selector}`);
+                }
+                const inputElement = input;
+                inputElement.focus();
+            }, inputSelector);
+            await (0, helpers_1.d)(2000); // Wait after focus
+            // Simulate Ctrl+A to select all
+            await this.page.keyboard.down("Control");
+            await this.page.keyboard.press("a", { delay: 100 });
+            await this.page.keyboard.up("Control");
+            await (0, helpers_1.d)(2000); // Wait after select
+            // Set clipboard and simulate Ctrl+V to paste
+            try {
+                await this.page.evaluate((value) => {
+                    navigator.clipboard.writeText(value);
+                }, boostAmount);
+            }
+            catch (error) {
+                (0, print_1.printMessageLinesBorderBox)(["Failed to set clipboard for boost amount:", String(error)], borderboxstyles_1.warningStyle);
+                // Fallback: Set value directly
+                await this.page.evaluate((selector, value) => {
+                    const input = document.querySelector(selector);
+                    if (input)
+                        input.value = value;
+                }, inputSelector, boostAmount);
+            }
+            await this.page.keyboard.down("Control");
+            await this.page.keyboard.press("v", { delay: 100 });
+            await this.page.keyboard.up("Control");
+            await (0, helpers_1.d)(2000); // Wait after paste
+            // Dispatch events without bubbling for framework compatibility
+            await this.page.evaluate((selector) => {
+                const input = document.querySelector(selector);
+                if (input) {
+                    input.dispatchEvent(new Event("input", { bubbles: false }));
+                    input.dispatchEvent(new Event("change", { bubbles: false }));
+                }
+            }, inputSelector);
+            // Check for "Too Low" div before secondary Boost button
+            (0, print_1.printMessageLinesBorderBox)(["Checking for 'Too Low' message..."], borderboxstyles_1.miningStyle);
+            await (0, helpers_1.d)(2000); // Wait for potential DOM updates
+            const tooLowSelector = "div.p-5.text-lg.font-semibold.leading-none.arial-font";
+            const tooLowPresent = await this.page
+                .$eval(tooLowSelector, (el) => { var _a; return ((_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim()) === "Too Low"; }, {
+                timeout: 5000,
+            })
+                .catch(() => false); // Return false if not found
+            if (tooLowPresent) {
+                (0, print_1.printMessageLinesBorderBox)(["'Too Low' message detected, aborting boost..."], borderboxstyles_1.warningStyle);
+                // Try clicking the SVG close button, then fallback to parent div
+                let closeSuccessful = false;
+                try {
+                    await this.page.waitForSelector('svg[xmlns="http://www.w3.org/2000/svg"][viewBox="0 0 50 50"]', { timeout: 5000 });
+                    await this.page.$eval('svg[xmlns="http://www.w3.org/2000/svg"][viewBox="0 0 50 50"]', (el) => el.click());
+                    closeSuccessful = true;
+                    (0, print_1.printMessageLinesBorderBox)(["Close SVG button clicked..."], borderboxstyles_1.miningStyle);
+                }
+                catch (svgError) {
+                    (0, print_1.printMessageLinesBorderBox)(["Failed to click SVG directly, trying parent div..."], borderboxstyles_1.warningStyle);
+                    // Fallback: Try clicking the parent div
+                    try {
+                        await this.page.waitForSelector('div > svg[xmlns="http://www.w3.org/2000/svg"][viewBox="0 0 50 50"]', { timeout: 5000 });
+                        await this.page.$eval('div > svg[xmlns="http://www.w3.org/2000/svg"][viewBox="0 0 50 50"]', (el) => el.parentElement.click());
+                        closeSuccessful = true;
+                        (0, print_1.printMessageLinesBorderBox)(["Close SVG parent div clicked..."], borderboxstyles_1.miningStyle);
+                    }
+                    catch (parentError) {
+                        // Log available SVG and parent divs for debugging
+                        const svgs = await this.page.$$eval('svg[xmlns="http://www.w3.org/2000/svg"]', (els) => els.map((el) => {
+                            var _a, _b;
+                            return ({
+                                parentClass: ((_a = el.parentElement) === null || _a === void 0 ? void 0 : _a.className) || "",
+                                parentId: ((_b = el.parentElement) === null || _b === void 0 ? void 0 : _b.id) || "",
+                                svgViewBox: el.getAttribute("viewBox") || "",
+                                svgClass: el.className.baseVal || "",
+                            });
+                        }));
+                        (0, print_1.printMessageLinesBorderBox)(["Available SVG elements:", JSON.stringify(svgs, null, 2)], borderboxstyles_1.warningStyle);
+                        (0, print_1.printMessageLinesBorderBox)(["Failed to click close SVG or parent div, continuing mining..."], borderboxstyles_1.warningStyle);
+                    }
+                }
+                if (!closeSuccessful) {
+                    (0, print_1.printMessageLinesBorderBox)(["Close button not clicked, continuing mining..."], borderboxstyles_1.warningStyle);
+                }
+                return; // Exit boost attempt
+            }
+            // Click the secondary Boost button
+            (0, print_1.printMessageLinesBorderBox)(["Clicking secondary Boost button..."], borderboxstyles_1.miningStyle);
             const secondaryClicked = await (0, pagehandlers_1.clickbyinnertxt)(this.page, "button", "Boost");
             if (!secondaryClicked) {
-                throw new Error("Secondary Boost button not found or not clickable.");
+                (0, print_1.printMessageLinesBorderBox)([
+                    "Secondary Boost button not found or not clickable, aborting boost.",
+                ], borderboxstyles_1.warningStyle);
+                return; // Exit boost attempt
             }
-            (0, print_1.printMessageLinesBorderBox)(["Secondary Boost button clicked. Awaiting signature popup..."], borderboxstyles_1.miningStyle);
-            // Now wait for the signature popup and sign the transaction using your existing logic.
+            // Handle transaction signing
+            (0, print_1.printMessageLinesBorderBox)(["Awaiting signature popup..."], borderboxstyles_1.miningStyle);
             const result = await (0, swapping_1.signtxloop)(this.page, this.browser);
             if (result.success) {
                 (0, print_1.printMessageLinesBorderBox)(["✅ Boost transaction approved."], borderboxstyles_1.miningStyle);
             }
             else {
-                (0, print_1.printMessageLinesBorderBox)([`❌ Boost signature failed: ${result.errorType}`], borderboxstyles_1.warningStyle);
+                (0, print_1.printMessageLinesBorderBox)([
+                    `❌ Boost signature failed: ${result.errorType}, continuing mining.`,
+                ], borderboxstyles_1.warningStyle);
+                return; // Exit boost attempt
             }
-            // Click the secondary Boost button that confirms the boost option.
-            const boostWindowClosed = await (0, pagehandlers_1.clickbyinnertxt)(this.page, "button", "Close");
+            // Close the popup
+            (0, print_1.printMessageLinesBorderBox)(["Closing boost popup..."], borderboxstyles_1.miningStyle);
+            let boostWindowClosed = false;
+            try {
+                await this.page.$eval("div.text-xl.btntxt.uppercase.text-center", (el) => {
+                    var _a;
+                    if (((_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim()) === "Close") {
+                        el.click();
+                    }
+                    else {
+                        throw new Error("Close element text does not match expected value.");
+                    }
+                });
+                boostWindowClosed = true;
+            }
+            catch (error) {
+                // Log available divs for debugging
+                const divs = await this.page.$$eval("div", (els) => els
+                    .filter((el) => { var _a; return ((_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim()) === "Close"; })
+                    .map((el) => {
+                    var _a;
+                    return ({
+                        text: (_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim(),
+                        class: el.className,
+                        id: el.id,
+                    });
+                }));
+                (0, print_1.printMessageLinesBorderBox)(["Available divs with 'Close' text:", JSON.stringify(divs, null, 2)], borderboxstyles_1.warningStyle);
+                (0, print_1.printMessageLinesBorderBox)(["Failed to close boost popup, continuing mining..."], borderboxstyles_1.warningStyle);
+                return; // Exit boost attempt
+            }
             if (!boostWindowClosed) {
-                throw new Error("Hash boost pop-up could not be closed.");
+                (0, print_1.printMessageLinesBorderBox)(["Boost popup not closed, continuing mining..."], borderboxstyles_1.warningStyle);
+                return; // Exit boost attempt
             }
             (0, print_1.printMessageLinesBorderBox)(["Hash boost pop-up closed..."], borderboxstyles_1.miningStyle);
         }
         catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
             (0, print_1.printMessageLinesBorderBox)([
                 "⚠️ Error during boost and sign flow:",
-                String(error.message || error),
+                errorMessage,
+                "Continuing mining...",
             ], borderboxstyles_1.warningStyle);
+            return; // Exit boost attempt
         }
     }
     /**
@@ -420,7 +586,7 @@ class MiningSession {
                 this.updateMetrics(lcd);
                 // --- NEW: Trigger boost & sign action once after 5 iterations ---
                 if (!this.hashBoosted && this.iterationCount >= 1 && this.hashBoostOn) {
-                    await this.triggerBoostAndSign(miningConfig.boostHashAmountPerSession.toString());
+                    await this.triggerBoostAndSign(miningConfig.boostHashAmountPerSession);
                     this.hashBoosted = true;
                 }
                 // ----------------------------------------------------------

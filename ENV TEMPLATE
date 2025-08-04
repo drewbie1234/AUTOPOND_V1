@@ -6,6 +6,7 @@
 # Make sure PK and ADDRESS are corresponding for miner number, add as many miners as you wish
 MINER1_PK="<MINER1_PRIVATE_KEY>"
 MINER2_PK="<MINER1_PRIVATE_KEY>"
+MINER3_PK="<MINER1_PRIVATE_KEY>"
 MINER1_ADDRESS="<MINER1_ADDRESS>"
 MINER2_ADDRESS="<MINER2_ADDRESS>"
 

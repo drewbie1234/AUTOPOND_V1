@@ -16,9 +16,9 @@ async function runMining(page, browser, mining) {
             timeout: 60000,
         });
         while (true) {
-            (0, print_1.printMessageLinesBorderBox)(["🔍 Checking active mining status via websocket (30s)..."], borderboxstyles_1.miningStyle);
+            (0, print_1.printMessageLinesBorderBox)(["🔍 Checking active mining status via websocket (15s)..."], borderboxstyles_1.miningStyle);
             //const active = await checkActiveMining(30000);
-            const active = await (0, websocket_1.seeMiningActivity)("Check Active Mining", { timeoutMs: 30000 });
+            const active = await (0, websocket_1.seeMiningActivity)("Check Active Mining", { timeoutMs: 15000 });
             (0, print_1.printMessageLinesBorderBox)([`Status: ${active ? "Active" : "Inactive"}`], borderboxstyles_1.miningStyle);
             // If not active, you might want to wait and try again.
             // (The original code did nothing if active was false.)
