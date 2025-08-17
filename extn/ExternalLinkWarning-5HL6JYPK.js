@@ -1,0 +1,8 @@
+import{d as k}from"./chunk-MVPAPIC5.js";import{b as f}from"./chunk-M5BU2PW7.js";import{j as x}from"./chunk-KLYKJSXB.js";import{a as g}from"./chunk-64KUFJMR.js";import"./chunk-WGGKE3W4.js";import"./chunk-5ANSHKRX.js";import{d as s}from"./chunk-SOBOWLRY.js";import{m as d,oa as p}from"./chunk-OA5YQ6R3.js";import"./chunk-OYJH24PS.js";import{c as m}from"./chunk-FVJIE3BT.js";import"./chunk-MW7L7CKT.js";import"./chunk-GYYECUZK.js";import"./chunk-C5GK3F6I.js";import"./chunk-S3GUIRR4.js";import"./chunk-JAJRGPOT.js";import{T as l}from"./chunk-AG2PIQR6.js";import{Ea as i,R as c,c as u}from"./chunk-DAZNTGG2.js";import"./chunk-2POO4JJE.js";import"./chunk-PQWATTJB.js";import"./chunk-OLIHMAK6.js";import{f as C,h as t,n as a}from"./chunk-YJSZZTEX.js";t();a();var n=C(u());var h=d.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+`,L=n.default.memo(({url:r})=>{let{t:e}=c(),{hideExternalLinkWarningModal:o}=f(),y=(0,n.useCallback)(()=>{m.capture("collectibleExternalLinkOpened",{data:{url:r.toString()}}),o(),self.open(r.href,"_blank")},[o,r]);return n.default.createElement(h,null,n.default.createElement(x,null),n.default.createElement(k,{icon:n.default.createElement(g,{color:l(i.colors.legacy.accentWarning,.1),diameter:94},n.default.createElement(p,{width:54,height:54,circleFill:i.colors.legacy.accentWarning})),primaryText:e("externalLinkWarningTitle"),secondaryText:e("externalLinkWarningDescription",{url:r.host})}),n.default.createElement(s,{primaryText:e("commandCancel"),secondaryText:e("commandContinue"),onPrimaryClicked:o,onSecondaryClicked:y}))}),j=L;export{L as ExternalLinkWarning,j as default};
+//# sourceMappingURL=ExternalLinkWarning-5HL6JYPK.js.map

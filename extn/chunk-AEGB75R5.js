@@ -1,5 +1,0 @@
-import{a as c}from"./chunk-TU4CQRN3.js";import{e as b}from"./chunk-RBBZHETH.js";import{e as g,f as m,g as I}from"./chunk-BFV33OZC.js";import{a as T}from"./chunk-7X4NV6OJ.js";import{f as M,h as a,n as l}from"./chunk-3KENBVE7.js";a();l();var e=M(T());function H(t,r,n){if(t)return t.startsWith("data://")?t:typeof r=="string"||typeof n=="string"?g(t):r&&n?I(t,r,n):r?m(t,"width",r):n?m(t,"height",n):g(t)}var R=({src:t,fallback:r,loader:n,onLoad:x,onError:d,loaderEnabled:L,...i})=>{let[f,s]=(0,e.useState)("init"),[o,u]=(0,e.useState)(!1),p=(0,e.useMemo)(()=>H(t,i.width,i.height),[i.height,i.width,t]),y=(0,e.useMemo)(()=>o?t:p,[t,p,o]),S=(0,e.useCallback)(E=>{o?(s("error"),d?.(E)):(s("retrying"),u(!0))},[o,s,d,u]);return f==="error"||!t?e.default.createElement(e.default.Fragment,null,r??null):e.default.createElement(e.default.Fragment,null,e.default.createElement("img",{src:y,onLoad:x,onError:S,...i}),f==="loading"&&L&&e.default.createElement(e.default.Fragment,null,n||e.default.createElement(U,null)))},U=b(c)`
-  width: 100%;
-  height: 100%;
-`;a();l();export{R as a};
-//# sourceMappingURL=chunk-AEGB75R5.js.map

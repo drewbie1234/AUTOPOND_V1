@@ -1,0 +1,24 @@
+import{d as k,n as B,za as L}from"./chunk-R3TVD7ZG.js";import"./chunk-5L73R4BT.js";import"./chunk-KZ5DTHAI.js";import"./chunk-KTETFJNC.js";import{a as H}from"./chunk-MZXI3U4A.js";import"./chunk-DDDNAWUZ.js";import{a as w}from"./chunk-YEA3RDR6.js";import"./chunk-XQXZVJWW.js";import"./chunk-6OVSPI3T.js";import"./chunk-U2ESYN6B.js";import"./chunk-MVPAPIC5.js";import"./chunk-FQHIVBIR.js";import"./chunk-WF7GYM4L.js";import"./chunk-M5BU2PW7.js";import"./chunk-44CPIUAN.js";import"./chunk-D4L3JZNR.js";import"./chunk-2LWT7HCH.js";import{a as f}from"./chunk-IWKHOUY6.js";import"./chunk-KLYKJSXB.js";import"./chunk-64KUFJMR.js";import"./chunk-QCLMZS5E.js";import"./chunk-FTVLZLLN.js";import"./chunk-WGGKE3W4.js";import"./chunk-5ANSHKRX.js";import{$ as u,Xa as y,gb as S}from"./chunk-DC74PDKK.js";import"./chunk-SYKKPS5X.js";import"./chunk-N37TUQ6O.js";import"./chunk-6QNUOYSW.js";import"./chunk-T66NYVB2.js";import"./chunk-CXKBWI2Z.js";import"./chunk-T7KN34I4.js";import"./chunk-4MBFYWFI.js";import"./chunk-DR6UT56S.js";import{b as C}from"./chunk-54A4UP2W.js";import"./chunk-CWW3WR5J.js";import"./chunk-K5JGLO2R.js";import"./chunk-SOBOWLRY.js";import{m}from"./chunk-OA5YQ6R3.js";import"./chunk-6QC2YHQA.js";import"./chunk-TEXQAPAF.js";import"./chunk-IHGFL7KF.js";import"./chunk-2UCAAWZM.js";import"./chunk-OYJH24PS.js";import"./chunk-FVJIE3BT.js";import"./chunk-MW7L7CKT.js";import"./chunk-GYYECUZK.js";import"./chunk-XA7AAXB6.js";import"./chunk-C5GK3F6I.js";import"./chunk-S3GUIRR4.js";import"./chunk-JAJRGPOT.js";import"./chunk-AG2PIQR6.js";import{Ca as x,Ea as d,Ja as t,R as v,c as V,sb as h}from"./chunk-DAZNTGG2.js";import"./chunk-2POO4JJE.js";import"./chunk-PQWATTJB.js";import"./chunk-OLIHMAK6.js";import{f as F,h as P,n as b}from"./chunk-YJSZZTEX.js";P();b();var e=F(V());var $=72,T=52,A=m.ul`
+  margin: 0;
+  padding: 0;
+  height: ${o=>o.fullHeight?410:360}px;
+  overflow: auto;
+`,I=m.li`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  background: ${o=>o.isSelected?d.colors.legacy.accentPrimary:d.colors.legacy.bgRow};
+  border-radius: 6px;
+  min-height: ${T}px;
+  padding: 16px;
+  margin-bottom: 10px;
+  &:hover {
+    background: ${o=>o.isSelected?d.colors.legacy.accentPrimaryLight:d.colors.legacy.bgButton};
+  }
+`,E=m(I)`
+  height: ${$}px;
+  padding: 12px;
+`,W=()=>{let{t:o}=v(),{handleHideModalVisibility:r}=L(),i=(0,e.useCallback)(()=>{r("swapProviders")},[r]),{selectQuote:n}=S(),l=y({selectQuote:n}),g=(0,e.useCallback)(s=>{l.setSelectedProviderIndex(s),i()},[i,l]),a=l.rows.some(u),c=o(a?"swapProvidersTitle":"swapTopQuotesTitle"),p=o("swapProvidersFee");return{...l,hideSwapProvidersModal:i,onClick:g,isBridge:a,title:c,feesLabel:p}},_=({isBridge:o})=>e.default.createElement(e.default.Fragment,null,[...Array(5)].map((r,i)=>e.default.createElement(H,{key:`swap-provider-row-loader-${i}`,align:"center",width:"100%",height:`${o?$:T}px`,backgroundColor:d.colors.legacy.bgRow,borderRadius:"8px",margin:"0 0 10px 0",padding:"10px"}))),j=e.default.memo(({rows:o,selectedProviderIndex:r,isLoadingProviders:i,title:n,isBridge:l,feesLabel:g,hideSwapProvidersModal:a,onClick:c})=>e.default.createElement(C,{onReset:a},e.default.createElement(B,{leftButton:{type:"close",onClick:a}},n),i?e.default.createElement(_,{isBridge:l}):e.default.createElement(A,{fullHeight:l},o.map((p,s)=>{let R=s===r;return u(p)?e.default.createElement(N,{key:`bridge-provider-row-${s}`,index:s,row:p,onClick:c,feesLabel:g}):e.default.createElement(M,{key:`provider-row-${s}`,index:s,row:p,onClick:c,isSelected:R})})))),G=()=>{let o=W();return e.default.createElement(j,{...o})},re=G,M=({index:o,row:r,isSelected:i,onClick:n})=>e.default.createElement(I,{isSelected:i,onClick:()=>n(o)},e.default.createElement(t,{font:"label",children:r.name,align:"left",color:i?"bgWallet":"white"}),e.default.createElement(t,{font:"label",children:r.amount,align:"right",color:i?"bgWallet":"textSecondary",className:x({flexShrink:0})})),N=({index:o,row:r,onClick:i,feesLabel:n})=>e.default.createElement(E,{onClick:()=>i(o)},r.logoURI?e.default.createElement(f,{flex:0,margin:"0 4px 0 0"},e.default.createElement(h,{src:r.logoURI,width:48,height:48})):null,e.default.createElement(f,{flex:1},e.default.createElement(w,{justify:"space-between"},e.default.createElement(t,{children:r.name,font:"labelSemibold",color:"white",align:"left"}),e.default.createElement(t,{children:r.amount,font:"labelSemibold",color:"white",align:"right"})),e.default.createElement(w,{justify:"space-between",padding:"8px 0 0 0"},e.default.createElement(t,{children:r.time.text,font:"label",color:r.time.isFast?"textSecondary":"accentAlert"}),e.default.createElement(t,null,e.default.createElement(k,{color:"textSecondary",font:"label",value:r.feeUsd}),e.default.createElement(t,{children:n,color:"textSecondary",font:"label",marginLeft:4})))));export{G as SwapProvidersPage,re as default};
+//# sourceMappingURL=SwapProvidersPage-FQDTSTMV.js.map

@@ -1,0 +1,2 @@
+import{M as n}from"./chunk-DAZNTGG2.js";import{h as e,n as r}from"./chunk-YJSZZTEX.js";e();r();var a=t=>{if(!t.length)return n.t("validationUtilsPasswordIsRequired");if(t.length<8)return n.t("validationUtilsPasswordLength")},o=(t,i)=>{if(t&&i!==t)return`${n.t("validationUtilsPasswordsDontMatch")}`},u=(t,i)=>{if(i===t)return`${n.t("validationUtilsPasswordCantBeSame")}`};export{a,o as b,u as c};
+//# sourceMappingURL=chunk-YP2RVVOJ.js.map
