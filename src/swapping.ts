@@ -136,17 +136,175 @@ const swappingroutine = async (
 ): Promise<{ success: boolean; errorType?: string; swapDetails?: any }> => {
   await d(2000);
 
+  // Helper to select a token with search fallback using mint address
+  async function selectToken(
+    page: Page,
+    isInput: boolean,
+    token: string,
+    mint: string | undefined
+  ): Promise<void> {
+    // Require a mint address for all tokens
+    if (!mint) {
+      throw new Error(`No mint address provided for token "${token}"`);
+    }
+
+    // Step 1: Open the dropdown
+    if (isInput) {
+      await inputTokenSelect(page);
+    } else {
+      await outputTokenSelect(page);
+    }
+    await d(3000); // Wait for dropdown to load
+
+    // Step 2: Try to find and click by token name in visible list
+    const tokenName = isInput ? currentFromToken : currentOutputToken;
+    let found = await tryClickToken(page, tokenName);
+    if (found) {
+      printMessageLinesBorderBox(
+        [`✅ Selected token "${tokenName}" from visible list`],
+        generalStyle
+      );
+      return; // Success, exit
+    }
+
+    // Step 3: Simulate paste of mint address into search input
+    const searchSelector = 'input[placeholder="Search"]';
+    try {
+      await page.waitForSelector(searchSelector, { timeout: 5000 });
+      await page.focus(searchSelector);
+      printMessageLinesBorderBox(
+        [`🔍 Attempting to paste mint "${mint}" for token "${tokenName}"`],
+        generalStyle
+      );
+
+      // Attempt to paste using keyboard (Ctrl+V or Cmd+V)
+      try {
+        // Set clipboard content using page.evaluate
+        await page.evaluate((mintValue) => {
+          navigator.clipboard.writeText(mintValue);
+        }, mint);
+        // Simulate Cmd+V (for macOS compatibility) or Ctrl+V
+        const isMac = process.platform === "darwin";
+        const modifier = isMac ? "Meta" : "Control";
+        await page.keyboard.down(modifier);
+        await page.keyboard.press("V");
+        await page.keyboard.up(modifier);
+      } catch (pasteError: unknown) {
+        // Fallback to typing if paste fails
+        const errorMessage =
+          pasteError instanceof Error ? pasteError.message : String(pasteError);
+        printMessageLinesBorderBox(
+          [`⚠️ Paste failed: ${errorMessage}. Falling back to typing mint...`],
+          warningStyle
+        );
+        await page.keyboard.type(mint);
+      }
+
+      // Verify input content
+      const inputValue = await page.evaluate((selector) => {
+        const input = document.querySelector(selector) as HTMLInputElement;
+        return input ? input.value : "";
+      }, searchSelector);
+      printMessageLinesBorderBox(
+        [`🛠 Debug: Search input value after paste/type: "${inputValue}"`],
+        generalStyle
+      );
+      if (inputValue !== mint) {
+        throw new Error(
+          `Failed to set mint "${mint}" in search input. Actual value: "${inputValue}"`
+        );
+      }
+
+      // Press Enter to ensure UI processes the input
+      await page.keyboard.press("Enter");
+      await d(3000); // Wait for list to filter/load
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Search input not found or failed to paste/type mint for token "${tokenName}" (mint: ${mint}): ${errorMessage}`
+      );
+    }
+
+    // Step 4: Look for token name in visible filtered list and click
+    found = await tryClickToken(page, tokenName);
+    if (found) {
+      printMessageLinesBorderBox(
+        [`✅ Selected token "${tokenName}" from filtered list`],
+        generalStyle
+      );
+      return;
+    }
+
+    // Debug: Log the filtered list
+    const filteredList = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("li")).map((e) => e.innerText)
+    );
+    printMessageLinesBorderBox(
+      [
+        `🛠 Debug: Filtered token list after mint search: ${filteredList.join(
+          ", "
+        )}`,
+      ],
+      warningStyle
+    );
+
+    // Step 5: Scroll the list
+    await page.evaluate(() => {
+      const list = document.querySelector("ul"); // REPLACE WITH REAL SELECTOR (e.g., '.token-list', 'div[role="listbox"] ul')
+      if (list) {
+        list.scrollTo(0, list.scrollHeight);
+      }
+    });
+    await d(1000);
+
+    // Step 6: Final attempt with token name in visible filtered list
+    found = await tryClickToken(page, tokenName);
+    if (found) {
+      printMessageLinesBorderBox(
+        [`✅ Selected token "${tokenName}" from filtered list after scrolling`],
+        generalStyle
+      );
+      return;
+    }
+
+    // Debug: Log the list after scrolling
+    const scrolledList = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("li")).map((e) => e.innerText)
+    );
+    printMessageLinesBorderBox(
+      [`🛠 Debug: Token list after scrolling: ${scrolledList.join(", ")}`],
+      warningStyle
+    );
+
+    throw new Error(
+      `Token "${tokenName}" (mint: ${mint}) not found on Pond0x even after searching and scrolling`
+    );
+  }
+
+  // Helper to check/click token by name in visible list (returns true if found and clicked)
+  async function tryClickToken(
+    page: Page,
+    searchText: string
+  ): Promise<boolean> {
+    return await page.evaluate((txt) => {
+      const elements = Array.from(
+        document.querySelectorAll("li")
+      ) as HTMLElement[];
+      const element = elements.find((e) => e.innerText.includes(txt));
+      if (element) {
+        element.click();
+        return true;
+      }
+      return false;
+    }, searchText);
+  }
+
   // Perform token selection if required.
   if (!(turboswap && tokensAlreadySelected)) {
-    if (fromToken !== "SOL") {
-      await inputTokenSelect(page);
-      await d(3000);
-      await clickSelectorWtxt(page, "li", fromToken);
-      await d(2000);
-    }
-    await outputTokenSelect(page);
-    await d(3000);
-    await clickSelectorWtxt(page, "li", toToken);
+    await selectToken(page, true, fromToken, currentFromMint);
+    await d(2000); // Delay after selection
+    await selectToken(page, false, toToken, currentOutputMint);
     await d(2000);
     if (turboswap) tokensAlreadySelected = true;
   }
@@ -194,10 +352,12 @@ export const swappond = async (
 
   // Initialize token configuration using the selected pair.
   currentFromToken = config.tokenA ?? "";
-  currentFromMint = config.tokenAMint;
+  currentFromMint =
+    config.tokenAMint ?? "So11111111111111111111111111111111111111112"; // Default to WSOL mint if tokenA is SOL
   currentThreshold = config.tokenALowThreshold ?? 0;
   currentOutputToken = config.tokenB ?? "";
-  currentOutputMint = config.tokenBMint;
+  currentOutputMint =
+    config.tokenBMint ?? "So11111111111111111111111111111111111111112"; // Default to WSOL mint if tokenB is SOL
   tokensAlreadySelected = false;
   swapAmountEntered = false;
 
@@ -754,10 +914,12 @@ async function runTokenManager(
       );
       // Fallback to config.tokenA/tokenB
       currentFromToken = config.tokenA ?? "";
-      currentFromMint = config.tokenAMint;
+      currentFromMint =
+        config.tokenAMint ?? "So11111111111111111111111111111111111111112";
       currentThreshold = config.tokenALowThreshold ?? 0;
       currentOutputToken = config.tokenB ?? "";
-      currentOutputMint = config.tokenBMint;
+      currentOutputMint =
+        config.tokenBMint ?? "So11111111111111111111111111111111111111112";
       currentSelectedPair = null;
       currentRoundCount = 0;
     } else {
@@ -767,10 +929,14 @@ async function runTokenManager(
       );
       currentSelectedPair = config.selectedPairs[randomIndex];
       currentFromToken = currentSelectedPair.tokenA ?? "";
-      currentFromMint = currentSelectedPair.tokenAMint;
+      currentFromMint =
+        currentSelectedPair.tokenAMint ??
+        "So11111111111111111111111111111111111111112";
       currentThreshold = currentSelectedPair.tokenALowThreshold ?? 0;
       currentOutputToken = currentSelectedPair.tokenB ?? "";
-      currentOutputMint = currentSelectedPair.tokenBMint;
+      currentOutputMint =
+        currentSelectedPair.tokenBMint ??
+        "So11111111111111111111111111111111111111112";
       currentRoundCount = 0;
       // Display the selected pair
       printTable("🤝  Selected pair for this swap", currentSelectedPair);
