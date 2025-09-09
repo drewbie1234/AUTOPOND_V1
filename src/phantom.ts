@@ -1,7 +1,7 @@
 import { Browser, Page } from "puppeteer";
 import inquirer from "inquirer";
 import { printMessageLinesBorderBox } from "./ui/print";
-import { phantomStyle } from "./ui/styles/borderboxstyles";
+import { phantomStyle, warningStyle } from "./ui/styles/borderboxstyles";
 import { clickbyinnertxt, waitforelement } from "./utils/pagehandlers";
 import { d } from "./utils/helpers";
 import { AppConfig } from "./types/config";
@@ -60,6 +60,31 @@ export const evalPhan = async (
   await enterpw(page);
   await clickcontinuepw(page);
   await d(3000);
+
+  // Close the Phantom onboarding page
+  printMessageLinesBorderBox(
+    ["Closing Phantom onboarding page..."],
+    phantomStyle
+  );
+  try {
+    if (!page.isClosed()) {
+      await page.close();
+      printMessageLinesBorderBox(
+        ["✅ Phantom onboarding page closed"],
+        phantomStyle
+      );
+    } else {
+      printMessageLinesBorderBox(
+        ["Phantom onboarding page already closed"],
+        warningStyle
+      );
+    }
+  } catch (error) {
+    printMessageLinesBorderBox(
+      ["⚠️ Failed to close Phantom onboarding page: " + error],
+      warningStyle
+    );
+  }
 };
 
 /**
