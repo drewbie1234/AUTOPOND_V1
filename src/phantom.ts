@@ -60,7 +60,6 @@ export const evalPhan = async (
   await enterpw(page);
   await clickcontinuepw(page);
   await d(3000);
-  await clickcontinuepw(page);
 };
 
 /**

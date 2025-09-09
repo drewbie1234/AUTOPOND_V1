@@ -28,7 +28,6 @@ export const clickSelectorWtxt = async (
   );
 };
 
-
 /**
  * getBoundingBox:
  * Finds an element matching a selector that contains specified text and returns its center coordinates.
@@ -109,6 +108,25 @@ export const wadapt = async (page: Page): Promise<void> => {
     ) as HTMLButtonElement;
     adapterButton?.click();
   });
+};
+
+/**
+ * clickProfileButton:
+ * Clicks the user profile button with role="button" containing an image with alt="User profile".
+ *
+ * @param page - Puppeteer Page instance.
+ * @returns A Promise that resolves to true if clicked, false if not found.
+ */
+export const clickProfileButton = async (page: Page): Promise<boolean> => {
+  const selector = 'div[role="button"] img[alt="User profile"]';
+  try {
+    await page.waitForSelector(selector, { timeout: 5000 });
+    await page.click(selector);
+    return true;
+  } catch (error) {
+    console.error(`Failed to click profile button: ${error}`);
+    return false;
+  }
 };
 
 /**

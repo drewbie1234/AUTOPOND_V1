@@ -38,6 +38,7 @@ import {
   setSwapAmount,
   setMaxTx,
   swapBtn,
+  clickProfileButton,
 } from "./utils/pagehandlers";
 import { handlephanpopup } from "./phantom";
 import { printTable } from "./ui/tables/printtable";
@@ -78,7 +79,7 @@ export const connectwallet = async (
   );
   await d(1000);
   await wadapt(page);
-  await d(3000);
+  await d(1000);
   await handlephanpopup(page, browser, "Connect", "Phantom\nDetected");
 
   // Get the connected wallet's public key.
@@ -87,6 +88,26 @@ export const connectwallet = async (
     ["👻 Phantom wallet connected", userpublickey],
     phantomStyle
   );
+
+  // Open wallet view by clicking profile button
+  printMessageLinesBorderBox(["💼 Opening wallet view..."], phantomStyle);
+  try {
+    const clicked = await clickProfileButton(page);
+    if (!clicked) throw new Error("Profile button not found");
+    await d(2000); // Wait for wallet view to load
+  } catch (error) {
+    throw new Error("Failed to open wallet view: " + error);
+  }
+
+  // Handle Phantom popup for signing
+  printMessageLinesBorderBox(
+    ["🔐 Handling verification popup..."],
+    phantomStyle
+  );
+  await handlephanpopup(page, browser, "Confirm", "Verify Solana");
+
+  // Confirm verification (optional, pending confirmation)
+  printMessageLinesBorderBox(["✅ Solana verification complete"], phantomStyle);
 };
 
 /**
